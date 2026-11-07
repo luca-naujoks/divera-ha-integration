@@ -1,6 +1,5 @@
 # DIVERA 24/7 – Home Assistant Integration
-
-[![Buy me a Beer](https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20Beer&emoji=🍺&slug=lassefactory&button_colour=FFDD00&font_colour=000000&font_family=Comic&outline_colour=000000&coffee_colour=ffffff)](https://www.buymeacoffee.com/lassefactory)
+## Dieses Repository ist ein Fork von lassefactory´s https://github.com/lassefactory/divera-hacs. Riesen dank für die Grundarbeit <3
 
 Eine inoffizielle Home Assistant Integration für DIVERA 24/7, die Einsätze in Echtzeit über eine WebSocket-Verbindung empfängt.
 
@@ -16,53 +15,19 @@ Die Integration verbindet sich dauerhaft per **WebSocket** mit den DIVERA-Server
 
 - Home Assistant OS, Supervised oder Core
 - DIVERA 24/7 Account mit API-Zugang
-- HACS installiert (für die empfohlene Installation)
 
 ---
 
-## Installation über HACS (empfohlen)
+## Installation über Marketplace
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=lassefactory&repository=divera-hacs)
-
-1. HACS in Home Assistant öffnen
+1. Marketplace in Home Assistant öffnen
 2. Oben rechts auf die **drei Punkte** klicken → **Benutzerdefinierte Repositories**
 3. Folgendes eintragen:
-   - **Repository:** `https://github.com/lassefactory/divera-hacs`
+   - **Repository:** `https://github.com/luca-naujoks/divera-ha-integration`
    - **Kategorie:** Integration
 4. **Hinzufügen** klicken
-5. In HACS nach **DIVERA 24/7** suchen und **Herunterladen** klicken
+5. Im Marketplace nach **DIVERA 24/7** suchen und **Herunterladen** klicken
 6. Home Assistant neu starten
-
----
-
-## Manuelle Installation
-
-1. Den Ordner `custom_components/divera/` aus diesem Repository herunterladen
-2. In das Home Assistant Konfigurationsverzeichnis kopieren:
-   ```
-   config/custom_components/divera/
-   ```
-3. Home Assistant neu starten
-
-Die fertige Verzeichnisstruktur sollte so aussehen:
-```
-config/
-└── custom_components/
-    └── divera/
-        ├── activity.py
-        ├── __init__.py
-        ├── binary_sensor.py
-        ├── config_flow.py
-        ├── const.py
-        ├── coordinator.py
-        ├── entity.py
-        ├── manifest.json
-        ├── sensor.py
-        ├── strings.json
-        └── translations/
-            ├── de.json
-            └── en.json
-```
 
 ---
 
@@ -74,7 +39,7 @@ config/
    - Den Accesskey aus DIVERA eintragen
    - DIVERA → Einstellungen → DEBUG → Accesskey kopieren
 4. **Einheit auswählen** aus der Liste der verfügbaren Einheiten
-5. **Einsatzdauer (Minuten)** festlegen (Standard: 60, mindestens 1 Minute)
+5. **Einsatzdauer (Minuten)** festlegen (Standard: 60, mindestens 1 Minute. Dieser wert wird verwendet, um die einsatzmeldung zurück zu setzen)
 6. Fertig – die Sensoren erscheinen automatisch am Gerät der Einheit
 
 ---
