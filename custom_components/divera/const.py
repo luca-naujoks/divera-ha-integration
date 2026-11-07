@@ -7,6 +7,8 @@ WS_URL = "wss://ws.divera247.com/ws"
 CONF_ACCESS_KEY = "access_key"
 CONF_UCR_ID = "ucr_id"
 CONF_UCR_NAME = "ucr_name"
+CONF_ACTIVE_MINUTES = "active_minutes"
+DEFAULT_ACTIVE_MINUTES = 60
 
 # Fallback-Polling-Intervall (Sekunden) falls WS-Verbindung unterbrochen ist
 FALLBACK_POLL_INTERVAL = 300

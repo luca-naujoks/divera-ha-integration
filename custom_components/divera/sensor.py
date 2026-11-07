@@ -3,7 +3,11 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorEntityDescription,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -12,8 +16,22 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_UCR_ID, CONF_UCR_NAME, DOMAIN
 from .coordinator import DiveraCoordinator
+from .entity import DiveraEntity
 
 NO_ALARM_STATE = "Kein aktiver Einsatz"
+
+SENSORS = (
+    SensorEntityDescription(key="title", translation_key="title"),
+    SensorEntityDescription(key="text", translation_key="text"),
+    SensorEntityDescription(key="address", translation_key="address"),
+    SensorEntityDescription(key="id", translation_key="id"),
+    SensorEntityDescription(
+        key="date", translation_key="date", device_class=SensorDeviceClass.TIMESTAMP
+    ),
+    SensorEntityDescription(key="lat", translation_key="lat"),
+    SensorEntityDescription(key="lng", translation_key="lng"),
+    SensorEntityDescription(key="vehicles", translation_key="vehicles"),
+)
 
 
 def _fmt_ts(unix: int | None) -> str | None:
@@ -31,7 +49,60 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator: DiveraCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([DiveraSensor(coordinator, entry)])
+    async_add_entities([
+        DiveraSensor(coordinator, entry),
+        *(DiveraAttributeSensor(coordinator, entry, description) for description in SENSORS),
+    ])
+
+
+class DiveraAttributeSensor(DiveraEntity, SensorEntity):
+    """A typed view of one field of the latest alarm."""
+
+    def __init__(
+        self,
+        coordinator: DiveraCoordinator,
+        entry: ConfigEntry,
+        description: SensorEntityDescription,
+    ) -> None:
+        super().__init__(coordinator, entry, description.key)
+        self.entity_description = description
+
+    @property
+    def native_value(self) -> str | int | float | datetime | None:
+        alarm = self.coordinator.data
+        if alarm is None:
+            return None
+        key = self.entity_description.key
+        value = alarm.get(key)
+        if value is None:
+            return None
+        if key == "date":
+            try:
+                return datetime.fromtimestamp(float(value), tz=timezone.utc)
+            except (TypeError, ValueError, OverflowError, OSError):
+                return None
+        if key in ("lat", "lng"):
+            try:
+                number = float(value)
+                limit = 90 if key == "lat" else 180
+                return number if -limit <= number <= limit else None
+            except (TypeError, ValueError, OverflowError):
+                return None
+        if key == "vehicles":
+            return len(value) if isinstance(value, (list, dict)) else None
+        if key == "id":
+            return str(value)[:255]
+        return str(value)[:255]
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        alarm = self.coordinator.data or {}
+        key = self.entity_description.key
+        if key == "text" and alarm.get(key) is not None:
+            return {"full_description": alarm[key]}
+        if key == "vehicles" and isinstance(alarm.get(key), (list, dict)):
+            return {"vehicles": alarm[key]}
+        return {}
 
 
 class DiveraSensor(CoordinatorEntity[DiveraCoordinator], SensorEntity):

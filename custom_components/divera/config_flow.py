@@ -4,16 +4,43 @@ from __future__ import annotations
 import aiohttp
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig, SelectSelectorMode
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
-from .const import BASE_URL, CONF_ACCESS_KEY, CONF_UCR_ID, CONF_UCR_NAME, DOMAIN, JWT_URL
+from .const import (
+    BASE_URL,
+    CONF_ACCESS_KEY,
+    CONF_ACTIVE_MINUTES,
+    CONF_UCR_ID,
+    CONF_UCR_NAME,
+    DEFAULT_ACTIVE_MINUTES,
+    DOMAIN,
+    JWT_URL,
+)
+
+
+def _timeout_schema(default: int = DEFAULT_ACTIVE_MINUTES) -> vol.Schema:
+    return vol.Schema({
+        vol.Required(CONF_ACTIVE_MINUTES, default=default): vol.All(
+            vol.Coerce(int), vol.Range(min=1)
+        ),
+    })
 
 
 class DiveraConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for DIVERA 24/7."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: config_entries.ConfigEntry):
+        return DiveraOptionsFlow()
 
     def __init__(self) -> None:
         self._access_key: str = ""
@@ -58,6 +85,7 @@ class DiveraConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_UCR_ID: ucr_id,
                     CONF_UCR_NAME: ucr_name,
                 },
+                options={CONF_ACTIVE_MINUTES: user_input[CONF_ACTIVE_MINUTES]},
             )
 
         if not self._ucr_options:
@@ -75,7 +103,7 @@ class DiveraConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="select_ucr",
-            data_schema=vol.Schema({vol.Required(CONF_UCR_ID): ucr_selector}),
+            data_schema=_timeout_schema().extend({vol.Required(CONF_UCR_ID): ucr_selector}),
             errors=errors,
         )
 
@@ -123,3 +151,17 @@ class DiveraConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             options[str(ucr_id)] = name
 
         return options, None
+
+
+class DiveraOptionsFlow(config_entries.OptionsFlow):
+    """Allow existing installations to configure the activity timeout."""
+
+    async def async_step_init(self, user_input=None) -> FlowResult:
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+        return self.async_show_form(
+            step_id="init",
+            data_schema=_timeout_schema(
+                self.config_entry.options.get(CONF_ACTIVE_MINUTES, DEFAULT_ACTIVE_MINUTES)
+            ),
+        )

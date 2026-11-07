@@ -3,18 +3,23 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from datetime import timedelta
 
 import aiohttp
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .activity import AlarmActivity
 from .const import (
     BASE_URL,
     CONF_ACCESS_KEY,
+    CONF_ACTIVE_MINUTES,
     CONF_UCR_ID,
+    DEFAULT_ACTIVE_MINUTES,
     DOMAIN,
     FALLBACK_POLL_INTERVAL,
     JWT_URL,
@@ -43,13 +48,23 @@ class DiveraCoordinator(DataUpdateCoordinator):
         self._jwt: str | None = None
         self._ws_task: asyncio.Task | None = None
         self._ws_connected: bool = False
+        self.active_minutes = entry.options.get(CONF_ACTIVE_MINUTES, DEFAULT_ACTIVE_MINUTES)
+        self.activity = AlarmActivity()
+        self._activity_store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.activity")
 
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=entry,
             name=DOMAIN,
             # Polling startet aktiv; wird deaktiviert sobald WS verbunden ist
             update_interval=timedelta(seconds=FALLBACK_POLL_INTERVAL),
+        )
+
+    async def async_restore_activity(self) -> None:
+        """Load the last alarm and its deadline before the first API refresh."""
+        self.activity = AlarmActivity.restore(
+            await self._activity_store.async_load(), self.active_minutes
         )
 
     # ------------------------------------------------------------------
@@ -129,7 +144,10 @@ class DiveraCoordinator(DataUpdateCoordinator):
         except aiohttp.ClientError as err:
             raise UpdateFailed(f"Verbindungsfehler: {err}") from err
 
-        return self._extract_alarm(payload)
+        alarm = self._extract_alarm(payload)
+        if self.activity.update(alarm, time.time(), self.active_minutes):
+            await self._activity_store.async_save(self.activity.as_dict())
+        return alarm
 
     def _extract_alarm(self, payload: dict):
         """Neuesten aktiven Alarm aus der API-Antwort extrahieren."""

@@ -49,10 +49,13 @@ Die fertige Verzeichnisstruktur sollte so aussehen:
 config/
 └── custom_components/
     └── divera/
+        ├── activity.py
         ├── __init__.py
+        ├── binary_sensor.py
         ├── config_flow.py
         ├── const.py
         ├── coordinator.py
+        ├── entity.py
         ├── manifest.json
         ├── sensor.py
         ├── strings.json
@@ -71,13 +74,54 @@ config/
    - Den Accesskey aus DIVERA eintragen
    - DIVERA → Einstellungen → DEBUG → Accesskey kopieren
 4. **Einheit auswählen** aus der Liste der verfügbaren Einheiten
-5. Fertig – der Sensor erscheint automatisch
+5. **Einsatzdauer (Minuten)** festlegen (Standard: 60, mindestens 1 Minute)
+6. Fertig – die Sensoren erscheinen automatisch am Gerät der Einheit
 
 ---
 
 ## Sensor
 
-Nach der Einrichtung wird ein Sensor erstellt:
+Nach der Einrichtung werden einzelne Sensoren für die Einsatzdaten erstellt.
+Alle verwenden dieselbe WebSocket-/REST-Aktualisierung; zusätzliche Sensoren erzeugen keine zusätzlichen API-Abfragen.
+
+| Sensor | Inhalt |
+|---|---|
+| Stichwort | Alarmstichwort |
+| Beschreibung | Meldungstext, auf 255 Zeichen gekürzt; vollständiger Text im Attribut `full_description` |
+| Adresse | Einsatzadresse (maximal 255 Zeichen) |
+| Einsatz-ID | DIVERA Alarm-ID |
+| Alarmiert am | Zeitpunkt als nativer Home-Assistant-Zeitstempel |
+| Breitengrad / Längengrad | GPS-Koordinaten als Zahlen |
+| Anzahl Fahrzeuge | Anzahl der Einträge in der Fahrzeugliste; vollständige Liste im Attribut `vehicles` |
+| Sonderrechte (Binärsensor) | Wert des API-Felds `priority` |
+| Geschlossen (Binärsensor) | Wert des API-Felds `closed` |
+| Aktiver Einsatz (Binärsensor) | Zeitlich begrenzte Anzeige eines Einsatzes |
+
+Die Namen werden auf Deutsch und Englisch übersetzt. Entity-IDs vergibt Home Assistant automatisch;
+sie können in den Einstellungen angepasst werden. Fehlende oder ungültige Werte erscheinen als
+`unknown`, bei einem fehlgeschlagenen Datenabruf werden die Sensoren `unavailable`.
+
+### Aktiver Einsatz
+
+Der Binärsensor schaltet ein, sobald eine neue, nicht geschlossene Einsatz-ID empfangen wird.
+Nach der eingestellten Einsatzdauer schaltet er automatisch aus, auch ohne weitere API-Aktualisierung.
+Wird der Einsatz geschlossen oder nicht mehr von der API geliefert, schaltet er früher aus.
+Ein neuer Einsatz startet die Dauer neu; Änderungen desselben Einsatzes verlängern sie nicht.
+Nach Ablauf bleibt derselbe Einsatz ausgeschaltet, selbst wenn er weiter von der API geliefert wird.
+Die übrigen Sensoren zeigen weiterhin die gelieferten Einsatzdaten an.
+
+Die Einsatzdauer lässt sich unter **Einstellungen → Geräte & Dienste → DIVERA → Konfigurieren** ändern.
+Bestehende Installationen verwenden zunächst 60 Minuten. Änderungen werden ab dem ursprünglichen
+Aktivierungszeitpunkt berechnet. Ein Neustart oder Neuladen setzt die Dauer nicht zurück;
+Einsatz-ID und Ablaufzeit werden gespeichert. Beim erstmaligen Einrichten aktiviert auch ein
+bereits vorhandener, nicht geschlossener Einsatz den Timer ab Empfang.
+Die Attribute `alarm_id` und `expires_at` zeigen die zuletzt verarbeitete Einsatz-ID und Ablaufzeit.
+Während einer API-Störung zeigt auch dieser Sensor `unavailable`; die Ablaufzeit läuft weiter.
+
+### Bisheriger Sensor (weiterhin verfügbar)
+
+Der bisherige Sensor bleibt mit seinem Zustand, seiner eindeutigen ID und allen Attributen erhalten,
+damit bestehende Dashboards, Automationen und Blueprint-Instanzen weiter funktionieren:
 
 **`sensor.divera_<einheitname>`**
 
@@ -97,7 +141,7 @@ Nach der Einrichtung wird ein Sensor erstellt:
 | `alarmiert_am` | Alarmierungszeitpunkt (ISO 8601) |
 | `geschlossen` | true wenn Einsatz abgeschlossen |
 | `fahrzeuge` | Alarmierte Fahrzeuge |
-| `latitude` / `longitude` | GPS-Koordinaten (werden automatisch auf der Karte angezeigt) |
+| `latitude` / `longitude` | GPS-Koordinaten |
 | + weitere | Alle weiteren Felder aus der DIVERA API |
 
 ---
@@ -105,6 +149,8 @@ Nach der Einrichtung wird ein Sensor erstellt:
 ## Blueprint – Alarm-Automation
 
 Im Ordner `blueprints/` liegt ein fertiges Blueprint, mit dem du ganz einfach Automationen erstellen kannst.
+Es reagiert auf Änderungen der Einsatz-ID und erkennt dadurch auch aufeinanderfolgende Einsätze
+mit demselben Stichwort. Änderungen am Text desselben Einsatzes lösen keine neue Alarmierung aus.
 
 ### Blueprint installieren
 
@@ -122,7 +168,7 @@ Das Blueprint bietet folgende Einstellungen:
 
 | Einstellung | Beschreibung |
 |---|---|
-| **DIVERA Sensor** | Auswahl des DIVERA-Sensors |
+| **DIVERA Sensor** | Bisherigen DIVERA-Alarm-Sensor mit dem Attribut `einsatz_id` auswählen |
 | **Stichwörter filtern** | Kommagetrennte Stichwörter die NICHT auslösen sollen (z. B. `THL, Übung`) |
 | **Aktionen** | Frei definierbar – Benachrichtigung, Licht, TTS, etc. |
 

@@ -12,7 +12,8 @@
         "title": "Einheit auswählen",
         "description": "Wähle die Einheit aus, für die Alarme angezeigt werden sollen.",
         "data": {
-          "ucr_id": "Einheit"
+          "ucr_id": "Einheit",
+          "active_minutes": "Einsatzdauer (Minuten)"
         }
       }
     },
@@ -23,6 +24,56 @@
     "abort": {
       "already_configured": "Diese Einheit ist bereits konfiguriert.",
       "no_units": "Keine Einheiten für diesen API-Schlüssel gefunden."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Aktiver Einsatz",
+        "description": "Wird nach dieser Anzahl Minuten ausgeschaltet. Neue Einsätze starten den Timer neu; Aktualisierungen desselben Einsatzes nicht. Änderungen gelten ab dem ursprünglichen Aktivierungszeitpunkt.",
+        "data": {
+          "active_minutes": "Einsatzdauer (Minuten)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "title": {
+        "name": "Stichwort"
+      },
+      "text": {
+        "name": "Beschreibung"
+      },
+      "address": {
+        "name": "Adresse"
+      },
+      "id": {
+        "name": "Einsatz-ID"
+      },
+      "date": {
+        "name": "Alarmiert am"
+      },
+      "lat": {
+        "name": "Breitengrad"
+      },
+      "lng": {
+        "name": "Längengrad"
+      },
+      "vehicles": {
+        "name": "Anzahl Fahrzeuge"
+      }
+    },
+    "binary_sensor": {
+      "priority": {
+        "name": "Sonderrechte"
+      },
+      "closed": {
+        "name": "Geschlossen"
+      },
+      "active_alarm": {
+        "name": "Aktiver Einsatz"
+      }
     }
   }
 }

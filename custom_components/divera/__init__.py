@@ -7,12 +7,13 @@ from homeassistant.core import HomeAssistant
 from .const import DOMAIN
 from .coordinator import DiveraCoordinator
 
-PLATFORMS = ["sensor"]
+PLATFORMS = ["sensor", "binary_sensor"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Integration einrichten: initiale Daten laden + WebSocket starten."""
     coordinator = DiveraCoordinator(hass, entry)
+    await coordinator.async_restore_activity()
 
     # Initiale Daten per REST laden (blockiert bis Erfolg oder Fehler)
     await coordinator.async_config_entry_first_refresh()
@@ -26,7 +27,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # WebSocket-Loop als Background-Task starten
     await coordinator.async_start_websocket()
 
+    entry.async_on_unload(entry.add_update_listener(_async_update_options))
+
     return True
+
+
+async def _async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Apply timeout changes using the persisted alarm start time."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

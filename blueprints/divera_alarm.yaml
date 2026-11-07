@@ -2,14 +2,17 @@ blueprint:
   name: DIVERA 24/7 – Alarmierung
   description: >
     Löst aus, wenn ein neuer DIVERA-Alarm eingeht – auch wenn bereits ein
-    aktiver Einsatz vorliegt (Attribut-Trigger auf "stichwort").
+    aktiver Einsatz vorliegt oder das Stichwort unverändert bleibt
+    (Attribut-Trigger auf "einsatz_id").
     Optional können Stichwörter definiert werden, bei denen KEINE Aktion
     ausgeführt werden soll (z. B. "THL, Feuer Klein, Übung").
   domain: automation
   input:
     sensor_entity:
       name: DIVERA Sensor
-      description: Der DIVERA-Alarm-Sensor
+      description: >
+        Der bisherige DIVERA-Alarm-Sensor mit den Attributen einsatz_id,
+        stichwort und geschlossen (nicht die einzelnen Attribut-Sensoren).
       selector:
         entity:
           domain: sensor
@@ -37,16 +40,19 @@ variables:
 trigger:
   - platform: state
     entity_id: !input sensor_entity
-    attribute: stichwort
+    attribute: einsatz_id
 
 condition:
-  # Kein Alarm-State (leer, unbekannt, "Kein aktiver Einsatz")
+  # Nur ein gültiger Einsatz, nicht das Entfernen der Einsatzdaten
   - condition: template
     value_template: >
       {{
         trigger.to_state is not none
         and trigger.to_state.state not in
           ['Kein aktiver Einsatz', '', 'unknown', 'unavailable']
+        and trigger.to_state.attributes.einsatz_id is defined
+        and trigger.to_state.attributes.einsatz_id not in
+          ['', none]
         and trigger.to_state.attributes.stichwort is defined
         and trigger.to_state.attributes.stichwort not in
           ['Kein aktiver Einsatz', '', none]
@@ -55,12 +61,12 @@ condition:
   # Nicht auslösen wenn Einsatz bereits geschlossen
   - condition: template
     value_template: >
-      {{ state_attr(sensor_entity, 'geschlossen') != true }}
+      {{ trigger.to_state.attributes.get('geschlossen') not in [true, 1, '1', 'true'] }}
 
   # Stichwort-Filter
   - condition: template
     value_template: >
-      {% set stichwort = (state_attr(sensor_entity, 'stichwort') or '') | lower %}
+      {% set stichwort = (trigger.to_state.attributes.get('stichwort') or '') | lower %}
       {% set keywords = filter_keywords.split(',') | map('trim') | map('lower') | reject('eq', '') | list %}
       {% if keywords | count == 0 %}
         true

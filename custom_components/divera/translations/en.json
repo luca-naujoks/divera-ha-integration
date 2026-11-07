@@ -12,7 +12,8 @@
         "title": "Select unit",
         "description": "Select the unit whose alarms should be displayed.",
         "data": {
-          "ucr_id": "Unit"
+          "ucr_id": "Unit",
+          "active_minutes": "Active alarm duration (minutes)"
         }
       }
     },
@@ -23,6 +24,56 @@
     "abort": {
       "already_configured": "This unit is already configured.",
       "no_units": "No units found for this API key."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Alarm activity",
+        "description": "Turns off after this many minutes. New alarms restart the timer; updates to the same alarm do not. Changes apply from the original activation time.",
+        "data": {
+          "active_minutes": "Active alarm duration (minutes)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "title": {
+        "name": "Alarm keyword"
+      },
+      "text": {
+        "name": "Description"
+      },
+      "address": {
+        "name": "Address"
+      },
+      "id": {
+        "name": "Alarm ID"
+      },
+      "date": {
+        "name": "Alarm time"
+      },
+      "lat": {
+        "name": "Latitude"
+      },
+      "lng": {
+        "name": "Longitude"
+      },
+      "vehicles": {
+        "name": "Vehicle count"
+      }
+    },
+    "binary_sensor": {
+      "priority": {
+        "name": "Priority"
+      },
+      "closed": {
+        "name": "Closed"
+      },
+      "active_alarm": {
+        "name": "Active alarm"
+      }
     }
   }
 }
